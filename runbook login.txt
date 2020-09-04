@@ -1,0 +1,41 @@
+# Sample powershell Runbook I created for one of numerous automations. 
+# ~ Norbert Obiekwe
+
+$connectionName = "AzureRunAsConnection"
+try
+{
+    # Get the connection "AzureRunAsConnection"
+    $servicePrincipalConnection=Get-AutomationConnection -Name $connectionName         
+
+    "Logging in to Azure..."
+    Connect-AzureRmAccount `
+        -ServicePrincipal `
+        -TenantId $servicePrincipalConnection.TenantId `
+        -ApplicationId $servicePrincipalConnection.ApplicationId `
+        -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
+    "Login complete."
+}
+catch {
+    if (!$servicePrincipalConnection)
+    {
+        $ErrorMessage = "Connection $connectionName not found."
+        throw $ErrorMessage
+    } else{
+        Write-Error -Message $_.Exception
+        throw $_.Exception
+    }
+}
+
+# Optionally you can set the following as parameters
+$StorageAccountName = <storageAccountName>
+$RGName = <storageAccountResourceGroupName>
+$VaultName = <keyVaultName>
+$SecretName = <keyVaultSecretName>
+
+#Key name. For example key1 or key2 for the storage account
+New-AzureRmStorageAccountKey -ResourceGroupName $RGName -Name $StorageAccountName -KeyName "key2" -Verbose
+$SAKeys = Get-AzureRmStorageAccountKey -ResourceGroupName $RGName -Name $StorageAccountName
+
+$secretvalue = ConvertTo-SecureString $SAKeys[1].Value -AsPlainText -Force
+
+$secret = Set-AzureKeyVaultSecret -VaultName $VaultName -Name $SecretName -SecretValue $secretvalue

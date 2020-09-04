@@ -1,0 +1,71 @@
+Making case  to Principal manager for Operating system  Image upgrade during Virtual Machine Scale Set upgrade Virtualization project.  
+
+
+ 
+
+
+Initial review on pathway for Upgrading the OS image on the vmss.  (this is different from VM SKu (-d1_v2) upgrade)
+
+In the place of creating new VMSS with latest OS Image, There are alternative operational path to undertake, which is enabling automatic OS image upgrade or manual trigger of rolling OS upgrade. These could be done either through template or PowerShell or Cli
+
+	1 : Enable automatic Os image upgrade: 
+Automatic OS upgrade has the following characteristics:
+Once configured, the latest OS image published by image publishers is automatically applied to the scale set without user intervention.
+Upgrades batches of instances in a rolling manner each time a new platform image is published by the publisher.
+Integrates with application health probes and Application Health extension.
+Works for all VM sizes, and for both Windows and Linux platform images.
+You can opt out of automatic upgrades at any time (OS Upgrades can be initiated manually as well).
+The OS Disk of a VM is replaced with the new OS Disk created with latest image version. Configured extensions and custom data scripts are run, while persisted data disks are retained.
+Extension sequencing is supported.
+Automatic OS image upgrade can be enabled on a scale set of any size.
+Before beginning the upgrade process, the orchestrator will ensure that no more than 20% of instances in the entire scale set are unhealthy (for any reason).
+
+Supported OS images
+Scale set can optionally be configured with Application Health Probes to provide the platform with accurate information on the ongoing state of the application
+Publisher	OS Offer	Sku
+Canonical	UbuntuServer	16.04-LTS
+Canonical	UbuntuServer	18.04-LTS
+Rogue Wave (OpenLogic)	CentOS	7.5
+CoreOS	CoreOS	Stable
+Microsoft Corporation	WindowsServer	2012-R2-Datacenter
+Microsoft Corporation	WindowsServer	2016-Datacenter
+Microsoft Corporation	WindowsServer	2016-Datacenter-Smalldisk
+Microsoft Corporation	WindowsServer	2016-Datacenter-with-Containers
+Microsoft Corporation	WindowsServer	2019-Datacenter
+Microsoft Corporation	WindowsServer	2019-Datacenter-Smalldisk
+Microsoft Corporation	WindowsServer	2019-Datacenter-with-Containers
+Microsoft Corporation	WindowsServer	Datacenter-Core-1903-with-Containers-smalldisk
+
+Service Fabric requirements
+If you are using Service Fabric, ensure the following conditions are met:
+Service Fabric durability level is Silver or Gold, and not Bronze.
+The Service Fabric extension on the scale set model definition must have TypeHandlerVersion 1.1 or above.
+Durability level should be the same at the Service Fabric cluster and Service Fabric extension on the scale set model definition.
+Ensure that durability settings are not mismatched on the Service Fabric cluster and Service Fabric extension, as a mismatch will result in upgrade errors
+
+
+Operations to set automatic OS upgrades on a scale set model:
+Using template:
+Setting automaticOSUpgradePolicy.enableAutomaticOSUpgrade property is set to true on template. 
+{
+  "properties": {
+    "upgradePolicy": {
+      "automaticOSUpgradePolicy": {
+        "enableAutomaticOSUpgrade":  true
+      }
+    }
+  }
+}
+ Using PowerShell:
+Update-AzVmss -ResourceGroupName "myResourceGroup" -VMScaleSetName "myScaleSet" -AutomaticOSUpgrade $true
+
+Other management operations are getting the history of automatic OS image upgrade using PowerShell or api
+Get-AzVmss -ResourceGroupName "myResourceGroup" -VMScaleSetName "myScaleSet" -OSUpgradeHistory
+Get the latest version of a platform Os image.. using api or PowerShell 
+Get-AzVmImage -Location "westus" -PublisherName "Canonical" -Offer "UbuntuServer" -Skus "16.04-LTS"
+
+other option is using updating the vmssOS in template.
+
+
+ Norbert Obiekwe - 2019
+
